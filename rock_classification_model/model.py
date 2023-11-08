@@ -50,11 +50,36 @@ model = Sequential([
 ])
 
 # Compile the model
-model.compile(loss='categorical_crossentropy', optimizer=Adam(lr=0.001), metrics=['accuracy'])
+model.compile(loss='categorical_crossentropy', optimizer=Adam(learning_rate=0.001), metrics=['accuracy'])
+
+# Assuming train_generator.samples gives the total number of samples in the dataset
+num_samples = train_generator.samples
+print(f'Number of samples: {num_samples}')
+epochs_per_500_samples = 1
+
+# Calculate the total number of epochs based on the dataset size
+total_epochs = (num_samples // 500) * epochs_per_500_samples
+
+# Ensure that there is at least a minimum number of epochs
+min_epochs = 10
+total_epochs = max(total_epochs, min_epochs)
+
+# Learning Rate Scheduler
+reduce_lr = tf.keras.callbacks.ReduceLROnPlateau(
+    monitor='val_loss', 
+    factor=0.2, 
+    patience=5, 
+    verbose=1, 
+    mode='auto', 
+    min_delta=0.0001, 
+    cooldown=0, 
+    min_lr=0
+)
 
 # Train the model
-history = model.fit(train_generator, steps_per_epoch=train_generator.samples // batch_size, epochs=10,
-                    validation_data=val_generator, validation_steps=val_generator.samples // batch_size)
+history = model.fit(train_generator, steps_per_epoch=train_generator.samples // batch_size, epochs=total_epochs,
+                    validation_data=val_generator, validation_steps=val_generator.samples // batch_size,
+                    callbacks=[reduce_lr])
 
 # Evaluate the model on the testing data
 test_datagen = ImageDataGenerator(rescale=1./255)
